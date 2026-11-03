@@ -1,0 +1,28 @@
+name: SleepDemo
+options:
+  bundleIdPrefix: com.jdk829355
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  AsleepSDK:
+    url: https://github.com/asleep-ai/asleep-sdk-ios
+    from: 3.3.0
+targets:
+  SleepDemo:
+    type: application
+    platform: iOS
+    sources: [SleepDemo]
+    dependencies:
+      - package: AsleepSDK
+        product: AsleepSDK
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jdk829355.sleepdemo
+        DEVELOPMENT_TEAM: GFZ4D8P8HT
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "수면 중 호흡음과 코골이를 분석하기 위해 마이크를 사용합니다."
+        INFOPLIST_KEY_UIBackgroundModes: audio
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait

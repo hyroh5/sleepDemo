@@ -1,0 +1,6 @@
+SleepDemo/Secrets.swift
+SleepDemo.xcodeproj/
+xcuserdata/
+build/
+.claude/
+.DS_Store
