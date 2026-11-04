@@ -18,7 +18,7 @@ struct ContentView: View {
             case .tracking:
                 Text(format(vm.elapsed))
                     .font(.system(size: 56, weight: .light, design: .monospaced))
-                Text("업로드 \(vm.uploadCount)회")
+                Text("업로드 \(vm.uploadCount)회 · 중단 \(vm.interruptCount)회")
                     .foregroundStyle(.secondary)
                 Button("측정 종료", role: .destructive, action: vm.stop)
                     .buttonStyle(.borderedProminent)
@@ -54,6 +54,7 @@ struct ReportView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                row("누락 데이터 비율", String(format: "%.0f%%", report.missingDataRatio * 100))
                 if let stat = report.stat {
                     row("수면 효율", stat.sleepEfficiency.map { String(format: "%.0f%%", $0 * 100) })
                     row("총 수면 시간", minutes(stat.timeInSleep))

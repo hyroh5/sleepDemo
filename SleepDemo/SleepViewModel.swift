@@ -16,6 +16,7 @@ final class SleepViewModel: NSObject, ObservableObject {
     @Published var phase: Phase = .preparing
     @Published var elapsed: TimeInterval = 0
     @Published var uploadCount = 0
+    @Published var interruptCount = 0
     @Published var report: Asleep.Model.Report?
 
     private var config: Asleep.Config?
@@ -36,6 +37,7 @@ final class SleepViewModel: NSObject, ObservableObject {
     func start() {
         guard let config else { return }
         uploadCount = 0
+        interruptCount = 0
         elapsed = 0
         report = nil
         manager = Asleep.createSleepTrackingManager(config: config, delegate: self, recordingPath: nil)
@@ -134,7 +136,9 @@ extension SleepViewModel: AsleepCompletableTrackingDelegate {
         }
     }
 
-    nonisolated func didInterrupt() {}
+    nonisolated func didInterrupt() {
+        Task { @MainActor in interruptCount += 1 }
+    }
     nonisolated func didResume() {}
 
     nonisolated func micPermissionWasDenied() {
