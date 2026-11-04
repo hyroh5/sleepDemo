@@ -3,8 +3,38 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var vm = SleepViewModel()
+    @State private var dimmed = false
+    @State private var savedBrightness: CGFloat = 0.5
 
     var body: some View {
+        ZStack {
+            content
+            if dimmed {
+                // 완전한 검은 화면. 화면을 탭하면 돌아온다.
+                Color.black
+                    .ignoresSafeArea()
+                    .persistentSystemOverlays(.hidden)
+                    .onTapGesture { setDimmed(false) }
+            }
+        }
+        .statusBarHidden(dimmed)
+        .onChange(of: vm.phase) { phase in
+            if phase != .tracking { setDimmed(false) }
+        }
+    }
+
+    private func setDimmed(_ on: Bool) {
+        guard on != dimmed else { return }
+        if on {
+            savedBrightness = UIScreen.main.brightness
+            UIScreen.main.brightness = 0
+        } else {
+            UIScreen.main.brightness = savedBrightness
+        }
+        dimmed = on
+    }
+
+    private var content: some View {
         VStack(spacing: 24) {
             switch vm.phase {
             case .preparing:
@@ -20,10 +50,12 @@ struct ContentView: View {
                     .font(.system(size: 56, weight: .light, design: .monospaced))
                 Text("업로드 \(vm.uploadCount)회 · 중단 \(vm.interruptCount)회")
                     .foregroundStyle(.secondary)
-                Text("화면을 끄지 말고 충전기에 꽂아 두세요.\n밝기는 최소로 낮춰도 됩니다.")
+                Text("잠금 버튼으로 화면을 끄지 말고 충전기에 꽂아 두세요.\n\"화면 어둡게\"를 누르면 검은 화면이 뜨고, 탭하면 돌아옵니다.")
                     .font(.footnote)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
+                Button("화면 어둡게") { setDimmed(true) }
+                    .buttonStyle(.bordered)
                 Button("측정 종료", role: .destructive, action: vm.stop)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
