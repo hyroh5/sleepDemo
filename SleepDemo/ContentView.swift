@@ -45,6 +45,8 @@ struct ContentView: View {
                 Button("측정 시작", action: vm.start)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                Button("샘플 결과 보기", action: vm.showSample)
+                    .buttonStyle(.bordered)
             case .tracking:
                 Text(format(vm.elapsed))
                     .font(.system(size: 56, weight: .light, design: .monospaced))
@@ -62,8 +64,8 @@ struct ContentView: View {
             case .analyzing:
                 ProgressView("분석 중…")
             case .result:
-                if let report = vm.report {
-                    ReportView(report: report)
+                if let summary = vm.summary {
+                    ReportView(summary: summary)
                 }
                 Button("다시 측정", action: vm.reset)
                     .buttonStyle(.bordered)
@@ -85,44 +87,49 @@ struct ContentView: View {
 }
 
 struct ReportView: View {
-    let report: Asleep.Model.Report
+    let summary: ReportSummary
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                row("누락 데이터 비율", String(format: "%.0f%%", report.missingDataRatio * 100))
-                if let stat = report.stat {
-                    row("수면 효율", stat.sleepEfficiency.map { String(format: "%.0f%%", $0 * 100) })
-                    row("총 수면 시간", minutes(stat.timeInSleep))
-                    row("깸", minutes(stat.timeInWake))
-                    row("얕은 수면", minutes(stat.timeInLight))
-                    row("깊은 수면", minutes(stat.timeInDeep))
-                    row("REM", minutes(stat.timeInRem))
-                    row("코골이 횟수", stat.snoringCount.map(String.init))
-                    row("코골이 비율", stat.snoringRatio.map { String(format: "%.0f%%", $0 * 100) })
-                } else {
-                    Text("통계가 없습니다. (\(report.peculiarities.map { "\($0)" }.joined(separator: ", ")))")
+                if summary.isSample {
+                    Text("샘플 데이터 · 실제 측정값이 아닙니다")
+                        .font(.footnote.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.orange.opacity(0.25)))
                 }
-                if let stages = report.session.sleepStages, !stages.isEmpty {
+                ForEach(Array(summary.rows.enumerated()), id: \.offset) { _, r in
+                    HStack {
+                        Text(r.title)
+                        Spacer()
+                        Text(r.value).foregroundStyle(.secondary)
+                    }
+                }
+                if let reason = summary.emptyReason {
+                    Text(reason)
+                }
+                if !summary.stages.isEmpty {
                     Text("수면 단계").font(.headline).padding(.top)
-                    StageBar(stages: stages)
+                    StageBar(stages: summary.stages)
+                    HStack(spacing: 12) {
+                        legend("깸", .orange)
+                        legend("얕음", .cyan)
+                        legend("깊음", .indigo)
+                        legend("REM", .purple)
+                    }
+                    .font(.caption)
                 }
             }
             .padding()
         }
     }
 
-    private func row(_ title: String, _ value: String?) -> some View {
-        HStack {
+    private func legend(_ title: String, _ color: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 8, height: 8)
             Text(title)
-            Spacer()
-            Text(value ?? "-").foregroundStyle(.secondary)
         }
-    }
-
-    // SDK의 시간 값은 초 단위로 가정한다.
-    private func minutes(_ seconds: Int?) -> String? {
-        seconds.map { "\($0 / 60)분" }
     }
 }
 

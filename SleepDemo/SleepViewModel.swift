@@ -17,7 +17,7 @@ final class SleepViewModel: NSObject, ObservableObject {
     @Published var elapsed: TimeInterval = 0
     @Published var uploadCount = 0
     @Published var interruptCount = 0
-    @Published var report: Asleep.Model.Report?
+    @Published var summary: ReportSummary?
 
     private var config: Asleep.Config?
     private var manager: Asleep.SleepTrackingManager?
@@ -39,7 +39,7 @@ final class SleepViewModel: NSObject, ObservableObject {
         uploadCount = 0
         interruptCount = 0
         elapsed = 0
-        report = nil
+        summary = nil
         manager = Asleep.createSleepTrackingManager(config: config, delegate: self, recordingPath: nil)
         manager?.startTracking()
         startedAt = Date()
@@ -60,8 +60,13 @@ final class SleepViewModel: NSObject, ObservableObject {
         phase = .analyzing
     }
 
+    func showSample() {
+        summary = .sample
+        phase = .result
+    }
+
     func reset() {
-        report = nil
+        summary = nil
         phase = .ready
     }
 
@@ -81,7 +86,7 @@ final class SleepViewModel: NSObject, ObservableObject {
         let reports = Asleep.createReports(config: config)
         Task {
             do {
-                self.report = try await reports.report(sessionId: sessionId)
+                self.summary = ReportSummary(report: try await reports.report(sessionId: sessionId))
                 self.phase = .result
             } catch {
                 self.fail("리포트를 가져오지 못했습니다: \(error)")
