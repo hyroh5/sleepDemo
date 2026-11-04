@@ -49,6 +49,8 @@ final class SleepViewModel: NSObject, ObservableObject {
                 self.elapsed = Date().timeIntervalSince(startedAt)
             }
         }
+        // 화면이 잠기면 업로드가 끊겨서 측정 중에는 화면을 켜 둔다.
+        UIApplication.shared.isIdleTimerDisabled = true
         phase = .tracking
     }
 
@@ -64,6 +66,7 @@ final class SleepViewModel: NSObject, ObservableObject {
     }
 
     private func stopTimer() {
+        UIApplication.shared.isIdleTimerDisabled = false
         timer?.invalidate()
         timer = nil
     }
