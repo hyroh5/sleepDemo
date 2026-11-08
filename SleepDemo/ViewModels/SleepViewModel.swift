@@ -67,11 +67,6 @@ final class SleepViewModel: NSObject, ObservableObject {
         phase = .analyzing
     }
 
-    func showSample() {
-        summary = .sample
-        phase = .result
-    }
-
     func reset() {
         summary = nil
         phase = .ready

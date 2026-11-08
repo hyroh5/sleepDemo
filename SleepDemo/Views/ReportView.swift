@@ -6,13 +6,6 @@ struct ReportView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                if summary.isSample {
-                    Text("샘플 데이터 · 실제 측정값이 아닙니다")
-                        .font(.footnote.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.orange.opacity(0.25)))
-                }
                 ForEach(Array(summary.rows.enumerated()), id: \.offset) { _, r in
                     HStack {
                         Text(r.title)

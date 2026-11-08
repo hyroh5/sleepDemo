@@ -62,8 +62,6 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                 Button("설정 (\(vm.settings.environment))") { showSettings = true }
                     .buttonStyle(.bordered)
-                Button("샘플 결과 보기", action: vm.showSample)
-                    .buttonStyle(.bordered)
             case .tracking:
                 Text(format(vm.elapsed))
                     .font(.system(size: 56, weight: .light, design: .monospaced))
