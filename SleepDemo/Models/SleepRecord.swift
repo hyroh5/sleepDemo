@@ -13,6 +13,8 @@ struct SleepRecord: Codable, Identifiable {
     var startedAt: Date
     var endedAt: Date?
     var status: Status
+    /// 사용자가 붙인 이름. 비어 있으면 측정 시각을 제목으로 쓴다.
+    var title: String?
     /// 측정에 쓴 API 키 환경("test"/"live"). 이 필드가 생기기 전의 기록은 nil.
     var environment: String?
 
@@ -33,6 +35,11 @@ struct SleepRecord: Codable, Identifiable {
 
     /// 위 필드로 담지 못한 값이 있을 때를 대비한 리포트 전체 덤프.
     var rawDescription: String?
+
+    var displayTitle: String {
+        if let title, !title.isEmpty { return title }
+        return startedAt.formatted(date: .abbreviated, time: .shortened)
+    }
 
     init(pendingId: String, startedAt: Date, endedAt: Date? = nil, environment: String?) {
         id = pendingId

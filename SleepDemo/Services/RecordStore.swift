@@ -27,6 +27,13 @@ final class RecordStore: ObservableObject {
         save()
     }
 
+    func rename(id: String, title: String) {
+        guard let i = records.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        records[i].title = trimmed.isEmpty ? nil : trimmed
+        save()
+    }
+
     func delete(id: String) {
         records.removeAll { $0.id == id }
         save()
