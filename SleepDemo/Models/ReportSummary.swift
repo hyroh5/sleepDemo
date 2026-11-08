@@ -1,4 +1,5 @@
 import AsleepSDK
+import Foundation
 
 /// 결과 화면에 그릴 값만 모은 모델. 실제 리포트와 샘플 데이터가 같은 화면을 쓴다.
 struct ReportSummary {
