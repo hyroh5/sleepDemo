@@ -5,6 +5,7 @@ import UIKit
 @MainActor
 final class SleepViewModel: NSObject, ObservableObject {
     enum Phase: Equatable {
+        case needsKey
         case preparing
         case ready
         case tracking
@@ -23,15 +24,19 @@ final class SleepViewModel: NSObject, ObservableObject {
     private var manager: Asleep.SleepTrackingManager?
     private var timer: Timer?
     private var startedAt: Date?
-    private let userIdKey = "asleepUserId"
+    private var endedAt: Date?
+    let store = RecordStore()
+    let settings = SettingsStore()
+    // test/live는 사용자 데이터가 따로 관리되므로 환경마다 userId를 따로 저장한다.
+    private var userIdKey: String { "asleepUserId.\(settings.environment)" }
 
     func prepare() {
-        guard !Secrets.asleepAPIKey.isEmpty else {
-            phase = .failed("Secrets.swift에 API 키를 입력하세요.")
+        guard !settings.apiKey.isEmpty else {
+            phase = .needsKey
             return
         }
         phase = .preparing
-        Asleep.setup(apiKey: Secrets.asleepAPIKey, delegate: self)
+        Asleep.setup(apiKey: settings.apiKey, delegate: self)
     }
 
     func start() {
@@ -43,6 +48,7 @@ final class SleepViewModel: NSObject, ObservableObject {
         manager = Asleep.createSleepTrackingManager(config: config, delegate: self, recordingPath: nil)
         manager?.startTracking()
         startedAt = Date()
+        endedAt = nil
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let startedAt = self.startedAt else { return }
@@ -56,6 +62,7 @@ final class SleepViewModel: NSObject, ObservableObject {
 
     func stop() {
         manager?.stopTracking()
+        endedAt = Date()
         stopTimer()
         phase = .analyzing
     }
@@ -81,15 +88,33 @@ final class SleepViewModel: NSObject, ObservableObject {
         phase = .failed(message)
     }
 
-    private func loadReport(sessionId: String) {
+    /// 기록 화면에서 호출. 화면 상태(phase)는 건드리지 않고 저장소만 갱신한다.
+    func refetch(sessionId: String) {
+        loadReport(sessionId: sessionId, showResult: false)
+    }
+
+    private func loadReport(sessionId: String, showResult: Bool = true) {
         guard let config else { return }
         let reports = Asleep.createReports(config: config)
         Task {
             do {
-                self.summary = ReportSummary(report: try await reports.report(sessionId: sessionId))
-                self.phase = .result
+                let report = try await reports.report(sessionId: sessionId)
+                let old = store.record(id: sessionId)
+                let record = SleepRecord(
+                    report: report,
+                    startedAt: old?.startedAt ?? self.startedAt ?? Date(),
+                    endedAt: old?.endedAt ?? self.endedAt ?? Date(),
+                    // 다시 조회할 때도 처음 측정한 환경을 유지한다.
+                    environment: old?.environment ?? settings.environment
+                )
+                store.upsert(record)
+                if showResult {
+                    self.summary = ReportSummary(record: record)
+                    self.phase = .result
+                }
             } catch {
-                self.fail("리포트를 가져오지 못했습니다: \(error)")
+                // 세션은 pending으로 저장돼 있어서 기록 화면에서 다시 조회할 수 있다.
+                if showResult { self.fail("리포트를 가져오지 못했습니다. 이전 기록에서 다시 조회할 수 있습니다: \(error)") }
             }
         }
     }
@@ -125,7 +150,12 @@ extension SleepViewModel: AsleepSetupDelegate, AsleepConfigDelegate {
 
 extension SleepViewModel: AsleepCompletableTrackingDelegate {
     nonisolated func didCreate() {}
-    nonisolated func didCreate(sessionId: String) {}
+    nonisolated func didCreate(sessionId: String) {
+        // 리포트를 못 받아도 나중에 조회할 수 있도록 세션 ID부터 저장한다.
+        Task { @MainActor in
+            store.upsert(SleepRecord(pendingId: sessionId, startedAt: startedAt ?? Date(), environment: settings.environment))
+        }
+    }
 
     nonisolated func didUpload(sequence: Int) {
         Task { @MainActor in uploadCount = sequence }

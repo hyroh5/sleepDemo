@@ -5,6 +5,8 @@ struct ContentView: View {
     @StateObject private var vm = SleepViewModel()
     @State private var dimmed = false
     @State private var savedBrightness: CGFloat = 0.5
+    @State private var showHistory = false
+    @State private var showSettings = false
 
     var body: some View {
         ZStack {
@@ -16,6 +18,12 @@ struct ContentView: View {
                     .persistentSystemOverlays(.hidden)
                     .onTapGesture { setDimmed(false) }
             }
+        }
+        .sheet(isPresented: $showHistory) {
+            HistoryView(store: vm.store, refetch: { vm.refetch(sessionId: $0) })
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(settings: vm.settings, onSave: vm.prepare)
         }
         .statusBarHidden(dimmed)
         .onChange(of: vm.phase) { phase in
@@ -37,6 +45,11 @@ struct ContentView: View {
     private var content: some View {
         VStack(spacing: 24) {
             switch vm.phase {
+            case .needsKey:
+                Text("Asleep API 키를 입력해야 시작할 수 있습니다.")
+                    .multilineTextAlignment(.center)
+                Button("API 키 입력") { showSettings = true }
+                    .buttonStyle(.borderedProminent)
             case .preparing:
                 ProgressView("준비 중…")
             case .ready:
@@ -45,6 +58,10 @@ struct ContentView: View {
                 Button("측정 시작", action: vm.start)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                Button("이전 기록") { showHistory = true }
+                    .buttonStyle(.bordered)
+                Button("설정 (\(vm.settings.environment))") { showSettings = true }
+                    .buttonStyle(.bordered)
                 Button("샘플 결과 보기", action: vm.showSample)
                     .buttonStyle(.bordered)
             case .tracking:
@@ -73,6 +90,8 @@ struct ContentView: View {
                 Text(message).multilineTextAlignment(.center)
                 Button("다시 시도", action: vm.prepare)
                     .buttonStyle(.bordered)
+                Button("설정") { showSettings = true }
+                    .buttonStyle(.bordered)
             }
         }
         .padding()
@@ -83,77 +102,5 @@ struct ContentView: View {
     private func format(_ t: TimeInterval) -> String {
         let s = Int(t)
         return String(format: "%02d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60)
-    }
-}
-
-struct ReportView: View {
-    let summary: ReportSummary
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if summary.isSample {
-                    Text("샘플 데이터 · 실제 측정값이 아닙니다")
-                        .font(.footnote.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.orange.opacity(0.25)))
-                }
-                ForEach(Array(summary.rows.enumerated()), id: \.offset) { _, r in
-                    HStack {
-                        Text(r.title)
-                        Spacer()
-                        Text(r.value).foregroundStyle(.secondary)
-                    }
-                }
-                if let reason = summary.emptyReason {
-                    Text(reason)
-                }
-                if !summary.stages.isEmpty {
-                    Text("수면 단계").font(.headline).padding(.top)
-                    StageBar(stages: summary.stages)
-                    HStack(spacing: 12) {
-                        legend("깸", .orange)
-                        legend("얕음", .cyan)
-                        legend("깊음", .indigo)
-                        legend("REM", .purple)
-                    }
-                    .font(.caption)
-                }
-            }
-            .padding()
-        }
-    }
-
-    private func legend(_ title: String, _ color: Color) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(title)
-        }
-    }
-}
-
-struct StageBar: View {
-    let stages: [Int]
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(stages.enumerated()), id: \.offset) { _, s in
-                Rectangle().fill(color(s))
-            }
-        }
-        .frame(height: 32)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    // -1 오류, 0 깸, 1 얕음, 2 깊음, 3 REM
-    private func color(_ s: Int) -> Color {
-        switch s {
-        case 0: return .orange
-        case 1: return .cyan
-        case 2: return .indigo
-        case 3: return .purple
-        default: return .gray
-        }
     }
 }

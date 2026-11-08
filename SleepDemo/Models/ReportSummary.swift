@@ -7,26 +7,32 @@ struct ReportSummary {
     var emptyReason: String?
     var stages: [Int]
 
-    init(report: Asleep.Model.Report) {
+    init(record r: SleepRecord) {
         func pct(_ v: Float?) -> String { v.map { String(format: "%.0f%%", $0 * 100) } ?? "-" }
         // SDK의 시간 값은 초 단위로 가정한다.
         func min(_ v: Int?) -> String { v.map { "\($0 / 60)분" } ?? "-" }
-        rows = [("누락 데이터 비율", pct(report.missingDataRatio))]
-        if let s = report.stat {
+        let time = { (d: Date?) in d?.formatted(date: .abbreviated, time: .shortened) ?? "-" }
+        rows = [
+            ("측정 시작", time(r.startedAt)),
+            ("측정 종료", time(r.endedAt)),
+            ("API 환경", r.environment ?? "-"),
+            ("누락 데이터 비율", pct(r.missingDataRatio)),
+        ]
+        if r.hasStat {
             rows += [
-                ("수면 효율", pct(s.sleepEfficiency)),
-                ("총 수면 시간", min(s.timeInSleep)),
-                ("깸", min(s.timeInWake)),
-                ("얕은 수면", min(s.timeInLight)),
-                ("깊은 수면", min(s.timeInDeep)),
-                ("REM", min(s.timeInRem)),
-                ("코골이 횟수", s.snoringCount.map(String.init) ?? "-"),
-                ("코골이 비율", pct(s.snoringRatio)),
+                ("수면 효율", pct(r.sleepEfficiency)),
+                ("총 수면 시간", min(r.timeInSleep)),
+                ("깸", min(r.timeInWake)),
+                ("얕은 수면", min(r.timeInLight)),
+                ("깊은 수면", min(r.timeInDeep)),
+                ("REM", min(r.timeInRem)),
+                ("코골이 횟수", r.snoringCount.map(String.init) ?? "-"),
+                ("코골이 비율", pct(r.snoringRatio)),
             ]
         } else {
-            emptyReason = "통계가 없습니다. (\(report.peculiarities.map { "\($0)" }.joined(separator: ", ")))"
+            emptyReason = "통계가 없습니다. (\(r.peculiarities.joined(separator: ", ")))"
         }
-        stages = report.session.sleepStages ?? []
+        stages = r.sleepStages
     }
 
     /// 7시간 20분을 정상적으로 잤을 때를 가정한 화면 확인용 값. 실제 측정값이 아니다.
