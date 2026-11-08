@@ -17,6 +17,7 @@ jobs:
 
       - name: 빌드 (서명 없음)
         run: |
+          set +e
           xcodebuild \
             -project SleepDemo.xcodeproj \
             -scheme SleepDemo \
@@ -27,7 +28,15 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
-            build
+            build > build.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            # 실제 컴파일 에러를 어노테이션으로 남겨 로그 없이도 확인할 수 있게 한다.
+            grep -E "error:" build.log | sed "s#$PWD/##" | sort -u | head -10 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+          fi
+          exit $code
 
       - name: .ipa 패키징
         run: |
